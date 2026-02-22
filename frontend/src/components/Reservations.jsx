@@ -1,15 +1,84 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 
 export default function Reservations() {
     const ref = useRef(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+    const [rooms, setRooms] = useState([]);
+    const [formData, setFormData] = useState({
+        guestName: "",
+        phone: "",
+        email: "",
+        date: "",
+        time: "18:00",
+        guests: 1,
+        roomId: "",
+        specialRequests: ""
+    });
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const handleSubmit = (e) => {
+    useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const response = await fetch('http://localhost:3001/api/rooms');
+                if (!response.ok) throw new Error('Failed to fetch rooms');
+                const data = await response.json();
+                setRooms(data);
+                if (data.length > 0) {
+                    setFormData(prev => ({ ...prev, roomId: data[0].id.toString() }));
+                }
+            } catch (err) {
+                console.error('Rooms Fetch Error:', err);
+            }
+        };
+        fetchRooms();
+    }, []);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitted(true);
+        setLoading(true);
+        setError(null);
+
+        try {
+            // Check-out is not in the UI, so let's assume +2 hours for a restaurant reservation
+            // or just use the same day since the backend expects checkIn/checkOut
+            const checkIn = new Date(`${formData.date}T${formData.time}:00`);
+            const checkOut = new Date(checkIn.getTime() + 2 * 60 * 60 * 1000); // +2 hours
+
+            const response = await fetch('http://localhost:3001/api/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    roomId: parseInt(formData.roomId),
+                    guestName: formData.guestName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    checkIn: checkIn.toISOString(),
+                    checkOut: checkOut.toISOString(),
+                    status: 'pending'
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to submit booking');
+            }
+
+            setSubmitted(true);
+        } catch (err) {
+            console.error('Booking Error:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -60,6 +129,11 @@ export default function Reservations() {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                                {error && (
+                                    <div className="p-3 bg-red-50 text-red-500 text-sm rounded-xl border border-red-100 italic">
+                                        {error}
+                                    </div>
+                                )}
                                 <div className="grid sm:grid-cols-2 gap-5">
                                     <div>
                                         <label className="block text-xs font-semibold text-[#1A1A1A] mb-1.5 tracking-wide uppercase">
@@ -68,6 +142,9 @@ export default function Reservations() {
                                         <input
                                             required
                                             type="text"
+                                            name="guestName"
+                                            value={formData.guestName}
+                                            onChange={handleChange}
                                             placeholder="Almaz Haile"
                                             className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] placeholder-[#9a9a9a] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
                                         />
@@ -79,10 +156,27 @@ export default function Reservations() {
                                         <input
                                             required
                                             type="tel"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
                                             placeholder="+251 9XX XXX XXX"
                                             className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] placeholder-[#9a9a9a] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
                                         />
                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-[#1A1A1A] mb-1.5 tracking-wide uppercase">
+                                        Email Address
+                                    </label>
+                                    <input
+                                        required
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="almaz@example.com"
+                                        className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] placeholder-[#9a9a9a] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
+                                    />
                                 </div>
                                 <div className="grid sm:grid-cols-2 gap-5">
                                     <div>
@@ -92,6 +186,9 @@ export default function Reservations() {
                                         <input
                                             required
                                             type="date"
+                                            name="date"
+                                            value={formData.date}
+                                            onChange={handleChange}
                                             className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
                                         />
                                     </div>
@@ -101,29 +198,53 @@ export default function Reservations() {
                                         </label>
                                         <select
                                             required
+                                            name="time"
+                                            value={formData.time}
+                                            onChange={handleChange}
                                             className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
                                         >
                                             <option value="">Select time</option>
-                                            {["08:00", "09:00", "10:00", "12:00", "13:00", "14:00", "18:00", "19:00", "20:00", "21:00"].map(t => (
+                                            {["08:00", "12:00", "13:00", "14:00", "18:00", "19:00", "20:00", "21:00"].map(t => (
                                                 <option key={t} value={t}>{t}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-[#1A1A1A] mb-1.5 tracking-wide uppercase">
-                                        Number of Guests
-                                    </label>
-                                    <select
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
-                                    >
-                                        <option value="">Select guests</option>
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(n => (
-                                            <option key={n} value={n}>{n} {n === 1 ? "guest" : "guests"}</option>
-                                        ))}
-                                        <option value="large">Large group (10+)</option>
-                                    </select>
+                                <div className="grid sm:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-[#1A1A1A] mb-1.5 tracking-wide uppercase">
+                                            Dining Area / Room
+                                        </label>
+                                        <select
+                                            required
+                                            name="roomId"
+                                            value={formData.roomId}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
+                                        >
+                                            <option value="">Select an area</option>
+                                            {rooms.map(room => (
+                                                <option key={room.id} value={room.id}>{room.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-[#1A1A1A] mb-1.5 tracking-wide uppercase">
+                                            Number of Guests
+                                        </label>
+                                        <select
+                                            required
+                                            name="guests"
+                                            value={formData.guests}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] text-sm focus:outline-none focus:border-[#C0922F] transition-colors"
+                                        >
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(n => (
+                                                <option key={n} value={n}>{n} {n === 1 ? "guest" : "guests"}</option>
+                                            ))}
+                                            <option value="large">Large group (10+)</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-[#1A1A1A] mb-1.5 tracking-wide uppercase">
@@ -131,15 +252,20 @@ export default function Reservations() {
                                     </label>
                                     <textarea
                                         rows={3}
+                                        name="specialRequests"
+                                        value={formData.specialRequests}
+                                        onChange={handleChange}
                                         placeholder="Dietary needs, occasion, seating preferences..."
                                         className="w-full px-4 py-3 rounded-xl border border-[#e0d9cf] bg-[#F9F5EE] text-[#1A1A1A] placeholder-[#9a9a9a] text-sm focus:outline-none focus:border-[#C0922F] transition-colors resize-none"
                                     />
                                 </div>
                                 <button
                                     type="submit"
-                                    className="w-full py-4 bg-[#C0922F] text-white font-semibold rounded-xl hover:bg-[#D4A843] hover:shadow-lg hover:shadow-[#C0922F]/30 active:scale-[0.98] transition-all duration-200"
+                                    disabled={loading}
+                                    className="w-full py-4 bg-[#C0922F] text-white font-semibold rounded-xl hover:bg-[#D4A843] hover:shadow-lg hover:shadow-[#C0922F]/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Confirm Reservation
+                                    {loading && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />}
+                                    {loading ? "Processing..." : "Confirm Reservation"}
                                 </button>
                             </form>
                         )}

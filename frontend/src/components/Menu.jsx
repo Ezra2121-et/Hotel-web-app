@@ -1,17 +1,40 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
-import { menuCategories, menuItems } from "../data/menuData";
 import { Star } from "lucide-react";
 
 export default function Menu() {
+    const [menuItems, setMenuItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState("All");
+
+    const categories = ["All", "Breakfast", "Lunch", "Dinner", "Drinks"];
+
     const ref = useRef(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+    useEffect(() => {
+        const fetchMenu = async () => {
+            try {
+                const response = await fetch('http://localhost:3001/api/menu');
+                if (!response.ok) throw new Error('Failed to fetch menu');
+                const data = await response.json();
+                setMenuItems(data);
+            } catch (err) {
+                console.error('Menu Fetch Error:', err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMenu();
+    }, []);
 
     const filtered =
         activeCategory === "All"
             ? menuItems
-            : menuItems.filter((item) => item.category === activeCategory);
+            : menuItems.filter((item) => item.category.toLowerCase() === activeCategory.toLowerCase());
 
     return (
         <section id="menu" className="py-24 bg-[#F9F5EE]">
@@ -42,13 +65,13 @@ export default function Menu() {
                     transition={{ duration: 0.5, delay: 0.2 }}
                     className="flex flex-wrap justify-center gap-3 mb-12"
                 >
-                    {menuCategories.map((cat) => (
+                    {categories.map((cat) => (
                         <button
                             key={cat}
                             onClick={() => setActiveCategory(cat)}
                             className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer ${activeCategory === cat
-                                    ? "bg-[#C0922F] text-white shadow-lg shadow-[#C0922F]/30"
-                                    : "bg-white text-[#6b6b6b] border border-[#e0d9cf] hover:border-[#C0922F] hover:text-[#C0922F]"
+                                ? "bg-[#C0922F] text-white shadow-lg shadow-[#C0922F]/30"
+                                : "bg-white text-[#6b6b6b] border border-[#e0d9cf] hover:border-[#C0922F] hover:text-[#C0922F]"
                                 }`}
                         >
                             {cat}
@@ -56,46 +79,66 @@ export default function Menu() {
                     ))}
                 </motion.div>
 
-                {/* Menu Grid */}
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filtered.map((item, i) => (
-                        <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={isInView ? { opacity: 1, y: 0 } : {}}
-                            transition={{ duration: 0.5, delay: 0.05 * i }}
-                            layout
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
-                        >
-                            {/* Image */}
-                            <div className="relative h-48 overflow-hidden">
-                                <img
-                                    src={item.image}
-                                    alt={item.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                />
-                                {item.tag && (
-                                    <span className="absolute top-3 right-3 bg-[#C0922F] text-white text-xs font-semibold px-3 py-1 rounded-full">
-                                        {item.tag}
-                                    </span>
-                                )}
-                            </div>
+                {/* Loading / Error States */}
+                {loading && (
+                    <div className="flex justify-center py-20">
+                        <div className="w-10 h-10 border-4 border-[#C0922F]/20 border-t-[#C0922F] rounded-full animate-spin" />
+                    </div>
+                )}
 
-                            {/* Details */}
-                            <div className="p-5">
-                                <div className="flex items-start justify-between gap-3 mb-2">
-                                    <h3 className="font-heading text-lg text-[#1A1A1A] font-semibold leading-snug">
-                                        {item.name}
-                                    </h3>
-                                    <span className="text-[#C0922F] font-bold text-sm whitespace-nowrap mt-0.5">
-                                        {item.price}
-                                    </span>
+                {error && (
+                    <div className="text-center py-20 text-red-500 font-medium">
+                        Error: {error}. Please try again later.
+                    </div>
+                )}
+
+                {!loading && !error && (
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filtered.map((item, i) => (
+                            <motion.div
+                                key={item.id}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                                transition={{ duration: 0.5, delay: 0.05 * i }}
+                                layout
+                                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
+                            >
+                                {/* Image */}
+                                <div className="relative h-48 overflow-hidden">
+                                    <img
+                                        src={item.imageUrl || "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop"}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    />
+                                    {item.tag && (
+                                        <span className="absolute top-3 right-3 bg-[#C0922F] text-white text-xs font-semibold px-3 py-1 rounded-full">
+                                            {item.tag}
+                                        </span>
+                                    )}
                                 </div>
-                                <p className="text-[#6b6b6b] text-sm leading-relaxed">{item.description}</p>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
+
+                                {/* Details */}
+                                <div className="p-5">
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <h3 className="font-heading text-lg text-[#1A1A1A] font-semibold leading-snug">
+                                            {item.name}
+                                        </h3>
+                                        <span className="text-[#C0922F] font-bold text-sm whitespace-nowrap mt-0.5">
+                                            ETB {item.price}
+                                        </span>
+                                    </div>
+                                    <p className="text-[#6b6b6b] text-sm leading-relaxed">{item.description}</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
+
+                {!loading && !error && filtered.length === 0 && (
+                    <div className="text-center py-20 text-[#6b6b6b]">
+                        No items found in this category.
+                    </div>
+                )}
             </div>
         </section>
     );

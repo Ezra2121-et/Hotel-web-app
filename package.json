@@ -1,46 +1,20 @@
 {
-    "name": "hotel-web-app",
+    "name": "hotel-web-app-root",
     "private": true,
-    "version": "0.0.0",
-    "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "vite build",
-        "lint": "eslint .",
-        "preview": "vite preview",
+        "dev:frontend": "pnpm --filter hotel-web-app dev",
+        "dev:backend": "pnpm --filter backend dev",
+        "dev": "npx concurrently \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+        "build:frontend": "pnpm --filter hotel-web-app build",
         "backend:push": "pnpm --filter backend db:push",
         "backend:seed": "pnpm --filter backend db:seed"
     },
     "pnpm": {
         "overrides": {
             "vite": "^8.0.0-beta.13"
-        },
-        "onlyBuiltDependencies": [
-            "@prisma/client",
-            "@prisma/engines",
-            "esbuild",
-            "prisma"
-        ]
-    },
-    "dependencies": {
-        "framer-motion": "^12.4.7",
-        "lucide-react": "^0.475.0",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
-        "react-router-dom": "^7.2.0"
+        }
     },
     "devDependencies": {
-        "@eslint/js": "^9.17.0",
-        "@tailwindcss/vite": "^4.0.0",
-        "@types/react": "^19.0.8",
-        "@types/react-dom": "^19.0.3",
-        "@vitejs/plugin-react": "^4.3.4",
-        "eslint": "^9.17.0",
-        "eslint-plugin-react": "^7.37.2",
-        "eslint-plugin-react-hooks": "^5.0.0",
-        "eslint-plugin-react-refresh": "^0.4.16",
-        "globals": "^15.14.0",
-        "tailwindcss": "^4.0.0",
-        "vite": "^6.0.5"
+        "concurrently": "^9.1.2"
     }
 }

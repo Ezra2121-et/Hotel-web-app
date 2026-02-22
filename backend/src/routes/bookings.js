@@ -9,18 +9,28 @@ const prisma = new PrismaClient();
 router.post('/', async (req, res) => {
     const { roomId, guestName, email, phone, checkIn, checkOut } = req.body;
     try {
+        // Check if room exists
+        const room = await prisma.room.findUnique({
+            where: { id: parseInt(roomId) }
+        });
+
+        if (!room) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
         const booking = await prisma.booking.create({
             data: {
                 roomId: parseInt(roomId),
                 guestName,
                 email,
                 phone,
-                checkIn: new DateTime(checkIn),
-                checkOut: new DateTime(checkOut),
+                checkIn: new Date(checkIn),
+                checkOut: new Date(checkOut),
             },
         });
         res.status(201).json(booking);
     } catch (error) {
+        console.error('Booking Error:', error);
         res.status(500).json({ error: 'Failed to create booking' });
     }
 });

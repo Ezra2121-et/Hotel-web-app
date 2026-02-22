@@ -73,7 +73,7 @@ export default function Footer() {
                 <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-[#9a9a9a]">
                     <p>© {new Date().getFullYear()} Ever Food Zone · Gondar, Ethiopia</p>
                     <p className="text-xs">
-                        Built with ❤️ · All prices in ETB
+                        Built with ❤️ · All prices in ETB · <a href="/admin/login" className="hover:text-[#C0922F] transition-colors underline underline-offset-2">Admin Login</a>
                     </p>
                 </div>
             </div>
