@@ -23,7 +23,7 @@ export default function Reservations() {
     useEffect(() => {
         const fetchRooms = async () => {
             try {
-                const response = await fetch('http://localhost:3001/api/rooms');
+                const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/rooms`);
                 if (!response.ok) throw new Error('Failed to fetch rooms');
                 const data = await response.json();
                 setRooms(data);
@@ -53,7 +53,7 @@ export default function Reservations() {
             const checkIn = new Date(`${formData.date}T${formData.time}:00`);
             const checkOut = new Date(checkIn.getTime() + 2 * 60 * 60 * 1000); // +2 hours
 
-            const response = await fetch('http://localhost:3001/api/bookings', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/bookings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
